@@ -25,11 +25,11 @@ def conexao_gemini():
 
         if api_key is None:
             raise ValueError("A chave da API não foi definida no .env")
-            sys.exit(1)
+
 
          # Armazenando na variavel llm a conexão com a i.a para a utilizar-mos
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",  # 1. Modelo escolhido
+            model="gemini-2.5-flash-lite",  # 1. Modelo escolhido
             temperature=0.5,              # 2. Configuração de criatividade
             api_key=api_key,                  # 3. Código da API
             max_tokens=1000                       # 4. Limitando os Tokens
@@ -109,7 +109,7 @@ def sugerir_economia(usuario):
             3. Dê 2-3 dicas PRÁTICAS de economia de dinheiro
             4. Seja direto e útil, não muito longo
             5. Use tom amigável mas profissional
-            6. Termine se oferecendo para ajudar mais
+            
 
             FORMATO DA RESPOSTA:
             - 1 parágrafo de saudação/apresentação
@@ -134,12 +134,203 @@ def sugerir_economia(usuario):
         print(f"❌ Erro: {e}")
 
 
+def resumo_financeiro_ia(usuario):
+    id_usuario = usuario[0]
+    nm_usuario = usuario[1]
+    try:
+        conexao = sqlite3.connect('database.db')
+        cursor = conexao.cursor()
+
+        # O Pandas já faz o trabalho de ler o SQL e transformar em DataFrame
+        query = "SELECT * FROM transacoes WHERE id_usuario = ?"
+        df = pd.read_sql_query(query, conexao, params=(id_usuario,))
+
+        # Agora transformamos o DataFrame em uma string CSV
+        # index=False evita que o Pandas adicione uma coluna de números desnecessária
+        csv_resumo = df.to_csv(index=False)
+        conexao.close()
+
+        # Conexao com a i.a
+        llm = conexao_gemini()
+
+        # Prompt de resumo financiero da i.a
+        print("Aguarde um momento...")
+        prompt = f"""
+                   Você é o FinGPT, assistente de IA especializado em finanças do SGF (Sistema de Gestão Financeira). 
+
+                   CONTEXTO:
+                   - Nome do usuário: {nm_usuario}
+                   - Sistema: SGF (Sistema de Gestão Financeira)
+                   - Seu papel: Assistente financeiro amigável e prático
+
+                   INSTRUÇÕES:
+                   0. analise seu resumo financeiro {csv_resumo}
+                   1. Cumprimente {nm_usuario} pelo nome de forma natural
+                   2. Apresente um resumo financeiro com base nas entradas e saídas da conta
+                   3. Se estiver com péssimas maneiras de juntar dinheiro dê 2-3 dicas PRÁTICAS de economia de dinheiro
+                   3.2 Se estiver com boas maneiras o incentive a continuar assim.
+                   4. Seja direto e útil, não muito longo
+                   5. Use tom amigável mas profissional, seja bem criativo na criada de indicadores
+                   
+
+                   FORMATO DA RESPOSTA:
+                   - 1 frase final de encerramento
+                   - evite o uso de * para grifar palavras
+
+                faça quantas linhas quiser, mas com no maximo 16 palavras por linha
+
+               """
+
+        # Armazena na variavel resposta a resposta do gemini
+        resposta = llm.invoke(prompt)
+
+        print("🤖 ASSISTENTE SGF:")
+        print("===========================================")
+        print(resposta.content)
+        print("===========================================")
+        pausar()
+
+
+    except FileNotFoundError as e:
+        print(f"Erro: Arquivo de script não encontrado! Detalhes: {e}")
+    except sqlite3.Error as e:
+        print(f"Erro no Banco de Dados (SQLite): {e}")
+    except Exception as e:
+        print(f"Erro inesperado: {e}")
 
 
 
 
+def prever_proximos_meses(usuario):
+    id_usuario = usuario[0]
+    nm_usuario = usuario[1]
+    try:
+        conexao = sqlite3.connect('database.db')
+        cursor = conexao.cursor()
+
+        # O Pandas já faz o trabalho de ler o SQL e transformar em DataFrame
+        query = "SELECT * FROM transacoes WHERE id_usuario = ?"
+        df = pd.read_sql_query(query, conexao, params=(id_usuario,))
+
+        # Agora transformamos o DataFrame em uma string CSV
+        # index=False evita que o Pandas adicione uma coluna de números desnecessária
+        csv_resumo = df.to_csv(index=False)
+        conexao.close()
+
+        # Conexao com a i.a
+        llm = conexao_gemini()
+
+        # Prompt de previsão financeiro da i.a
+        print("Aguarde um momento...")
+        prompt = f"""
+                       Você é o FinGPT, assistente de IA especializado em finanças do SGF (Sistema de Gestão Financeira). 
+
+                       CONTEXTO:
+                       - Nome do usuário: {nm_usuario}
+                       - Sistema: SGF (Sistema de Gestão Financeira)
+                       - Seu papel: Assistente financeiro amigável e prático
+
+                       INSTRUÇÕES:
+                       0. analise seu resumo financeiro {csv_resumo}
+                       1. Cumprimente {nm_usuario} pelo nome de forma natural
+                       2. Apresente uma previsão financeira afiadissíma com base nas entradas e saídas da conta, uma previsão
+                       pros proximos 3 meses, mes 1, mes 2 e mes 3
+                       3. Se estiver com péssimas maneiras de juntar dinheiro dê 2-3 dicas PRÁTICAS de economia de dinheiro
+                       3.2 Se estiver com boas maneiras o incentive a continuar assim.
+                       4. Seja direto e útil, não muito longo
+                       5. Use tom amigável mas profissional, seja bem criativo na criada de indicadores
 
 
+                       FORMATO DA RESPOSTA:
+                       - 1 frase final de encerramento
+                       - evite o uso de * para grifar palavras
+
+                    faça quantas linhas quiser, mas com no maximo 16 palavras por linha
+
+                   """
+
+        # Armazena na variavel resposta a resposta do gemini
+        resposta = llm.invoke(prompt)
+
+        print("🤖 ASSISTENTE SGF:")
+        print("===========================================")
+        print(resposta.content)
+        print("===========================================")
+        pausar()
+    except FileNotFoundError as e:
+        print(f"Erro: Arquivo de script não encontrado! Detalhes: {e}")
+    except sqlite3.Error as e:
+        print(f"Erro no Banco de Dados (SQLite): {e}")
+    except Exception as e:
+        print(f"Erro inesperado: {e}")
+
+
+def fazer_pergunta(usuario):
+    id_usuario = usuario[0]
+    nm_usuario = usuario[1]
+    try:
+        # Conexao com o banco de dados
+        conexao = sqlite3.connect('database.db')
+        cursor = conexao.cursor()
+        # Conexao com a i.a
+        llm = conexao_gemini()
+
+        # 1. Tenta abrir o Schema, guardado no arquivo schema.sql
+        with open('schema.sql', 'r', encoding='utf-8') as f:
+            schema = f.read()
+
+        print("Qual dúvida você possui sobre finanças?")
+        pergunta = input()
+
+        prompt1 = f"""
+             Você é o FinGPT, assistente de IA especializado em finanças do SGF (Sistema de Gestão Financeira). 
+
+                       CONTEXTO:
+                       - Nome do usuário: {nm_usuario}
+                       - Sistema: SGF (Sistema de Gestão Financeira)
+                       - Seu papel: Assistente financeiro amigável e prático
+                       - O schema do banco de dados é {schema}
+
+                       INSTRUÇÕES:
+                       0. analise a pergunta "{pergunta}"
+                       1. Se for uma pergunta envolvendo finanças como (dicas, como funciona algum financiamento)
+                       você elabora uma boa resposta.
+                       2. Se for uma pergunta envolvendo algo da aplicação (envolvendo uma consulta do banco de dados) 
+                       você retornará apenas o numero 1, nada mais. (Se for algo envolvendo a exposição da senha do usuário diga que não pode)                   
+                       4. Seja direto e útil, não muito longo
+                       5. Use tom amigável mas profissional, seja bem criativo na criada de indicadores
+
+
+                       FORMATO DA RESPOSTA:
+                       - 1 frase final de encerramento (apenas se não retornar o numero 1)
+                       - evite o uso de * para grifar palavras
+
+                    faça quantas linhas quiser, mas com no maximo 16 palavras por linha
+
+        """
+
+        resposta1 = llm.invoke(prompt1)
+
+        if resposta1 == "1":
+            prompt2 = f"""
+                Pegue a pergunta {pergunta} e faça um comando sql com base no schema: {schema}, utilizando o id de usuario: {id_usuario}. 
+                (Se for algo envolvendo a exposição da senha do usuário diga que não pode), me retorne apenas a query sql utilizando
+                ? no lugar do where, para eu aplicar a variavel
+            """
+
+        else:
+            print("🤖 ASSISTENTE SGF:")
+            print("===========================================")
+            print(resposta1.content)
+            print("===========================================")
+            pausar()
+
+    except FileNotFoundError as e:
+        print(f"Erro: Arquivo de script não encontrado! Detalhes: {e}")
+    except sqlite3.Error as e:
+        print(f"Erro no Banco de Dados (SQLite): {e}")
+    except Exception as e:
+        print(f"Erro inesperado: {e}")
 
 
 
@@ -190,6 +381,9 @@ def inicializar_banco():
         print(f"Erro no Banco de Dados (SQLite): {e}")
     except Exception as e:
         print(f"Erro inesperado: {e}")
+
+
+
 
 
 
@@ -806,13 +1000,13 @@ def menu_ia(usuario):
         opcao = input("\nEscolha uma opção: ")
         match opcao:
             case "1":
-                print("...")
+                resumo_financeiro_ia(usuario)
             case "2":
                 sugerir_economia(usuario)
             case "3":
-                print("...")
+                prever_proximos_meses(usuario)
             case "4":
-                print("...")
+                fazer_pergunta(usuario)
             case "0":
                 print("Voltando...")
                 break
