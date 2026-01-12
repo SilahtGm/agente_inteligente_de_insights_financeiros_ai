@@ -45,3 +45,5 @@ O banco de dados `database.db` é composto por quatro tabelas principais:
 O sistema utiliza o modelo Gemini 2.5 Flash, disponibilizado gratuitamente pela Google AI Studio, integrado via LangChain. O modelo foi escolhido por oferecer bom desempenho em tarefas de linguagem natural, baixo custo computacional e compatibilidade com aplicações acadêmicas de pequeno e médio porte.
 
 de um pip install requirements.txt
+
+Inicialmente foi considerada a utilização de APIs de IA em nuvem. Contudo, devido às severas limitações de requisições diárias na camada gratuita, optou-se pela adoção de um modelo de linguagem local executado via Ollama, garantindo viabilidade de desenvolvimento, testes e demonstração do sistema.

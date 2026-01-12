@@ -51,41 +51,6 @@ def conexao_gemini():
 
 
 
-def apresentacao_ia(usuario):
-    try:
-        nm_usuario = usuario[1]
-        # Armazenando na variavel llm a conexao
-        llm = conexao_gemini()
-
-        # Prompt de apresentação da i.a
-        print("Aguarde um momento...")
-        prompt = f"""Você é o principal assistente (IA) de dados de um programa 
-            chamado SGF (Sistema de Gestão Financeira), seu nome é FinGPT. 
-
-            Sua tarefa é:
-            1. Apresentar-se de forma amigável
-            2. Explicar que pode ajudar com indicadores financeiros
-            3. Mostrar-se disponível para análises baseadas em dados
-
-            Faça uma apresentação curta (2-3 frases) em português.
-            
-            O nome do usuario é {nm_usuario}.
-            
-             faça quantas linhas quiser, mas com no maximo 16 palavras por linha
-            
-
-            """
-
-        # Armazena na variavel resposta a resposta do gemini
-        resposta = llm.invoke(prompt)
-
-        print("🤖 ASSISTENTE SGF:")
-        print("===========================================")
-        print(resposta.content)
-        print("===========================================")
-
-    except Exception as e:
-        print(f"❌ Erro: {e}")
 
 def sugerir_economia(usuario):
     try:
@@ -982,7 +947,6 @@ def menu_relatorios(usuario):
 def menu_ia(usuario):
     nm_usuario = usuario[1]
     while True:
-        apresentacao_ia(usuario)
         print("===================================================")
         print("          🤖 ASSISTENTE IA - FinGPT")
         print(f"          👤 Usuário: {nm_usuario}")
