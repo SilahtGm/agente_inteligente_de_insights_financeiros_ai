@@ -41,3 +41,5 @@ O banco de dados `database.db` é composto por quatro tabelas principais:
 - main.py
 
 ---
+
+O sistema utiliza o modelo Gemini 2.5 Flash, disponibilizado gratuitamente pela Google AI Studio, integrado via LangChain. O modelo foi escolhido por oferecer bom desempenho em tarefas de linguagem natural, baixo custo computacional e compatibilidade com aplicações acadêmicas de pequeno e médio porte.
