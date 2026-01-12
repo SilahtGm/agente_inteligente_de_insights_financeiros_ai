@@ -5,30 +5,45 @@ import sqlite3 #sqlite para banco de dados
 import os #os para informações do sistema
 import matplotlib.pyplot as plt
 import pandas as pd
+import sys
 
 
 
+# --- FUNÇÕES DA I.A ---
 
 def conexao_gemini():
-    # Essa função lê todas as chaves da variavel de ambiente automaticamente, injetando automatizamente a chave
-    load_dotenv()
+    try:
+        #  o load_dotenv lê o arquivo e carrega as variáveis para o ambiente do sistema, Carrega as variáveis do arquivo .env
+        load_dotenv()
 
-    # O que faz:
-    # 1. Acessa os.environ (variáveis de ambiente do sistema)
-    # 2. Procura pela chave "GOOGLE_API_KEY"
-    # 3. Retorna o valor SE existir, ou None se não existir
-    # 4. Armazena na variável 'api_key
-    api_key = os.getenv("GOOGLE_API_KEY")
+        # O que faz:
+        # 1. Acessa os.environ (variáveis de ambiente do sistema)
+        # 2. Procura pela chave "GOOGLE_API_KEY"
+        # 3. Retorna o valor SE existir, ou None se não existir
+        # 4. Armazena na variável 'api_key
+        api_key = os.getenv("GOOGLE_API_KEY")
 
-    # Armazenando na variavel llm a conexão com a i.a para a utilizar-mos
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",  # 1. Modelo escolhido
-        temperature=0.5,              # 2. Configuração de criatividade
-        api_key=api_key,                  # 3. Código da API
-        max_tokens=1000                       # 4. Limitando os Tokens
-    )
+        if api_key is None:
+            raise ValueError("A chave da API não foi definida no .env")
+            sys.exit(1)
 
-    return llm
+         # Armazenando na variavel llm a conexão com a i.a para a utilizar-mos
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash",  # 1. Modelo escolhido
+            temperature=0.5,              # 2. Configuração de criatividade
+            api_key=api_key,                  # 3. Código da API
+            max_tokens=1000                       # 4. Limitando os Tokens
+        )
+
+        return llm
+
+    except Exception as e:
+        print(f"❌ Falha na conexão: {e}")
+        print("\n📋 Verifique:")
+        print("1. Arquivo .env com GOOGLE_API_KEY válida")
+        print("2. Chave API ativada no Google AI Studio")
+        print("3. Conexão com internet")
+
 
 
 
@@ -43,6 +58,7 @@ def apresentacao_ia(usuario):
         llm = conexao_gemini()
 
         # Prompt de apresentação da i.a
+        print("Aguarde um momento...")
         prompt = f"""Você é o principal assistente (IA) de dados de um programa 
             chamado SGF (Sistema de Gestão Financeira), seu nome é FinGPT. 
 
@@ -54,6 +70,8 @@ def apresentacao_ia(usuario):
             Faça uma apresentação curta (2-3 frases) em português.
             
             O nome do usuario é {nm_usuario}.
+            
+             faça quantas linhas quiser, mas com no maximo 16 palavras por linha
             
 
             """
@@ -69,6 +87,51 @@ def apresentacao_ia(usuario):
     except Exception as e:
         print(f"❌ Erro: {e}")
 
+def sugerir_economia(usuario):
+    try:
+        nm_usuario = usuario[1]
+        # Armazenando na variavel llm a conexao
+        llm = conexao_gemini()
+
+        # Prompt de sugestão da i.a
+        print("Aguarde um momento...")
+        prompt = f"""
+            Você é o FinGPT, assistente de IA especializado em finanças do SGF (Sistema de Gestão Financeira). 
+
+            CONTEXTO:
+            - Nome do usuário: {nm_usuario}
+            - Sistema: SGF (Sistema de Gestão Financeira)
+            - Seu papel: Assistente financeiro amigável e prático
+
+            INSTRUÇÕES:
+            1. Cumprimente {nm_usuario} pelo nome de forma natural
+            2. Apresente-se brevemente como FinGPT do SGF
+            3. Dê 2-3 dicas PRÁTICAS de economia de dinheiro
+            4. Seja direto e útil, não muito longo
+            5. Use tom amigável mas profissional
+            6. Termine se oferecendo para ajudar mais
+
+            FORMATO DA RESPOSTA:
+            - 1 parágrafo de saudação/apresentação
+            - Dicas em tópicos curtos
+            - 1 frase final de encerramento
+            - evite o uso de * para grifar palavras
+            
+         faça quantas linhas quiser, mas com no maximo 16 palavras por linha
+        
+        """
+
+        # Armazena na variavel resposta a resposta do gemini
+        resposta = llm.invoke(prompt)
+
+        print("🤖 ASSISTENTE SGF:")
+        print("===========================================")
+        print(resposta.content)
+        print("===========================================")
+        pausar()
+
+    except Exception as e:
+        print(f"❌ Erro: {e}")
 
 
 
@@ -740,12 +803,12 @@ def menu_ia(usuario):
         print("    -> Qualquer dúvida sobre finanças")
         print("[0] ↩️  Voltar ao menu principal")
         print("===================================================")
-        opcao = int(input("\nEscolha uma opção: "))
+        opcao = input("\nEscolha uma opção: ")
         match opcao:
             case "1":
                 print("...")
             case "2":
-                print("...")
+                sugerir_economia(usuario)
             case "3":
                 print("...")
             case "4":
