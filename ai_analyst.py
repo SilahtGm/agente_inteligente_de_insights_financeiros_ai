@@ -1,4 +1,6 @@
 # Importações necessarias
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 import sqlite3 #sqlite para banco de dados
@@ -60,7 +62,8 @@ def sugerir_economia(usuario):
 
         # Prompt de sugestão da i.a
         print("Aguarde um momento...")
-        prompt = f"""
+        modelo_economia = PromptTemplate(
+            template="""
             Você é o FinGPT, assistente de IA especializado em finanças do SGF (Sistema de Gestão Financeira). 
 
             CONTEXTO:
@@ -84,14 +87,23 @@ def sugerir_economia(usuario):
             
          faça quantas linhas quiser, mas com no maximo 16 palavras por linha
         
-        """
+        """,
+            input_variables=["nm_usuario"]
+        )
+
+        # Variavel nomeada cadeia = modelo do prompt + modelo da i.a + metodo que transforma em string
+        cadeia = modelo_economia | llm | StrOutputParser() # StrOutputParser() tira a necessidade de passar .content
 
         # Armazena na variavel resposta a resposta do gemini
-        resposta = llm.invoke(prompt)
+        resposta = cadeia.invoke(
+            { # Declarando que a variavel no input_variables possui o valor da variavel nm_usuario
+                "nm_usuario" : nm_usuario
+            }
+        )
 
         print("🤖 ASSISTENTE SGF:")
         print("===========================================")
-        print(resposta.content)
+        print(resposta)
         print("===========================================")
         pausar()
 
@@ -247,8 +259,9 @@ def fazer_pergunta(usuario):
         print("Qual dúvida você possui sobre finanças?")
         pergunta = input()
 
-        prompt1 = f"""
-             Você é o FinGPT, assistente de IA especializado em finanças do SGF (Sistema de Gestão Financeira). 
+        modelo_de_prompt = PromptTemplate(
+            template= """
+                        Você é o FinGPT, assistente de IA especializado em finanças do SGF (Sistema de Gestão Financeira). 
 
                        CONTEXTO:
                        - Nome do usuário: {nm_usuario}
@@ -272,8 +285,14 @@ def fazer_pergunta(usuario):
 
                     faça quantas linhas quiser, mas com no maximo 16 palavras por linha
 
-        """
+                    """)
 
+        prompt1 = modelo_de_prompt.format(
+            nm_usuario = nm_usuario,
+            schema = schema,
+            pergunta = pergunta
+        )
+        
         resposta1 = llm.invoke(prompt1)
 
         if resposta1 == "1":
