@@ -1,49 +1,94 @@
-# 💰 SGF - Sistema de Gestão Financeira (SQL + Python)
+# 💰 SGF - Sistema de Gestão Financeira (SQL + Python + IA)
 
-Sistema de controle financeiro desenvolvido para demonstrar a integração entre linguagem de programação Python e bancos de dados relacionais (SQLite), focado em análise de indicadores e saúde financeira.
+Sistema completo de controle financeiro pessoal desenvolvido em **Python + SQLite**, com integração de **Inteligência Artificial** para geração de insights financeiros inteligentes.
 
 ---
 
-## 📌 Sobre o Projeto
-Este projeto simula um ambiente real de análise de dados onde as informações não estão em arquivos soltos, mas estruturadas em um banco de dados SQL. O sistema permite o cadastro de usuários, registro de movimentações e gera diagnósticos automáticos de saúde financeira.
+## 📌 Visão Geral
 
-### 🧠 O que este projeto demonstra:
-* **Modelagem de Dados:** Criação de tabelas com chaves primárias (PK), chaves estrangeiras (FK) e constraints de integridade.
-* **Análise via SQL:** Uso de queries complexas com `JOIN`, `GROUP BY` e funções de agregação (`SUM`).
-* **Data Visualization:** Integração com **Pandas** e **Matplotlib** para gerar gráficos de performance.
-* **Lógica de Negócio:** Implementação de KPIs (Indicadores-chave de Desempenho) para diagnosticar a eficiência financeira.
+O **SGF (Sistema de Gestão Financeira)** simula um ambiente real de análise de dados, onde as informações são estruturadas em banco relacional e processadas para gerar **indicadores financeiros, diagnósticos e previsões**.
+
+O sistema permite:
+- Cadastro de usuários
+- Registro de receitas e despesas
+- Criação de metas financeiras
+- Análise de saúde financeira (KPIs)
+- Insights inteligentes com IA
+
+---
+
+## 🧠 Diferenciais do Projeto
+
+### 🔹 Modelagem de Dados
+- Uso de **chaves primárias (PK)** e **estrangeiras (FK)**
+- Constraints para integridade dos dados
+- Estrutura relacional bem definida
+
+### 🔹 Análise com SQL
+- Queries com:
+  - `JOIN`
+  - `GROUP BY`
+  - `SUM`
+- Extração de indicadores financeiros diretamente do banco
+
+### 🔹 Integração com IA (FinGPT)
+- Assistente financeiro inteligente
+- Análise de dados do usuário
+- Geração de:
+  - Resumos financeiros
+  - Dicas personalizadas
+  - Previsões futuras
+
+### 🔹 Visualização de Dados
+- Uso de **Pandas** e **Matplotlib**
+- Geração de gráficos comparativos (Entradas vs Saídas)
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
-* **Linguagem:** Python 3.x
-* **Banco de Dados:** SQLite3
-* **Bibliotecas de Dados:** Pandas e Matplotlib
-* **Versionamento:** Git
+
+- **Linguagem:** Python 3.x  
+- **Banco de Dados:** SQLite3  
+- **IA:** Google Gemini (via LangChain)  
+- **Bibliotecas:**
+  - pandas
+  - matplotlib
+  - dotenv
+  - langchain
+- **Versionamento:** Git  
 
 ---
 
-## 📊 Estrutura do Banco de Dados
-O banco de dados `database.db` é composto por quatro tabelas principais:
-1.  **usuarios:** Dados cadastrais.
-2.  **categorias:** Segmentação de tipos de Receita e Despesa.
-3.  **transacoes:** Onde ocorrem os registros de fluxo de caixa.
-4.  **metas_economicas:** Planejamento financeiro de longo prazo.
+## 🗄️ Estrutura do Banco de Dados
 
-# Instale as dependências:
+O banco `database.db` contém 4 tabelas principais:
 
-## Bash
-
-- pip install pandas matplotlib
-  
-## Execute o sistema:
-
-- main.py
+| Tabela              | Descrição |
+|--------------------|----------|
+| `usuarios`          | Dados cadastrais dos usuários |
+| `categorias`        | Tipos de receitas e despesas |
+| `transacoes`        | Registro do fluxo financeiro |
+| `metas_economicas`  | Planejamento financeiro |
 
 ---
 
-O sistema utiliza o modelo Gemini 2.5 Flash, disponibilizado gratuitamente pela Google AI Studio, integrado via LangChain. O modelo foi escolhido por oferecer bom desempenho em tarefas de linguagem natural, baixo custo computacional e compatibilidade com aplicações acadêmicas de pequeno e médio porte.
+## ⚙️ Instalação
 
-de um pip install requirements.txt
+### 1. Clone o repositório
 
-Inicialmente foi considerada a utilização de APIs de IA em nuvem. Contudo, devido às severas limitações de requisições diárias na camada gratuita, optou-se pela adoção de um modelo de linguagem local executado via Ollama, garantindo viabilidade de desenvolvimento, testes e demonstração do sistema.
+git clone https://github.com/SilahtGm/sgf.git
+
+
+### 2. Instale as dependências
+
+pip install -r requirements.txt
+
+### 3.🔑 Configuração da API (IA)
+
+Crie um arquivo .env na raiz do projeto:
+
+GOOGLE_API_KEY=sua_chave_aqui
+
+
+### 4. ▶️ Execução do Sistema
+python ai_analyst.py

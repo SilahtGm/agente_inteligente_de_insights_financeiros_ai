@@ -7,9 +7,20 @@ import sqlite3 #sqlite para banco de dados
 import os #os para informações do sistema
 import matplotlib.pyplot as plt
 import pandas as pd
+import json
 import sys
 
 
+# --- FUNÇÃO BANCO DE DADOS ---
+
+def conectar_banco():
+    try:
+        conexao = sqlite3.connect('database.db')
+        cursor = conexao.cursor()
+        return conexao, cursor
+    except sqlite3.Error as e:
+        print(f"[!] Erro ao conectar ao banco: {e}")
+        return None, None
 
 # --- FUNÇÕES DA I.A ---
 
@@ -32,7 +43,7 @@ def conexao_gemini():
          # Armazenando na variavel llm a conexão com a i.a para a utilizar-mos
         llm = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash-lite",  # 1. Modelo escolhido
-            temperature=0.5,              # 2. Configuração de criatividade
+            temperature=0.8,              # 2. Configuração de criatividade
             api_key=api_key,                  # 3. Código da API
             max_tokens=1000                       # 4. Limitando os Tokens
         )
@@ -199,7 +210,8 @@ def prever_proximos_meses(usuario):
 
         # Prompt de previsão financeiro da i.a
         print("Aguarde um momento...")
-        prompt = f"""
+        modelo_prompt = PromptTemplate(
+            template = """
                        Você é o FinGPT, assistente de IA especializado em finanças do SGF (Sistema de Gestão Financeira). 
 
                        CONTEXTO:
@@ -224,7 +236,7 @@ def prever_proximos_meses(usuario):
 
                     faça quantas linhas quiser, mas com no maximo 16 palavras por linha
 
-                   """
+                   """)
 
         # Armazena na variavel resposta a resposta do gemini
         resposta = llm.invoke(prompt)
@@ -242,72 +254,127 @@ def prever_proximos_meses(usuario):
         print(f"Erro inesperado: {e}")
 
 
+
+
+
+
 def fazer_pergunta(usuario):
     id_usuario = usuario[0]
     nm_usuario = usuario[1]
+    conexao = None
     try:
-        # Conexao com o banco de dados
-        conexao = sqlite3.connect('database.db')
-        cursor = conexao.cursor()
-        # Conexao com a i.a
+        # Conexao com o banco de dados e i.a
+        conexao = conectar_banco()
         llm = conexao_gemini()
 
-        # 1. Tenta abrir o Schema, guardado no arquivo schema.sql
-        with open('schema.sql', 'r', encoding='utf-8') as f:
-            schema = f.read()
+        #  Buscar METAS
+        df_metas = pd.read_sql_query(
+            "SELECT * FROM metas_economicas WHERE id_usuario = ?", conexao, params=(id_usuario,)
+        )
+
+        # Buscar TRANSAÇÕES
+        df_transacoes = pd.read_sql_query(
+            "SELECT * FROM transacoes WHERE id_usuario = ?", conexao, params=(id_usuario,)
+        )
+
+        # Converter para JSON estruturado
+        informacoesUsuario = {
+            "metas": df_metas.to_dict(orient="records"),
+            "transacoes": df_transacoes.to_dict(orient="records")
+        }
+
+        # Caso tenha informações nulas
+        if not informacoesUsuario["metas"] or not informacoesUsuario["transacoes"]:
+            print("🤖 ASSISTENTE SGF:")
+            print("===========================================")
+
+            if not informacoesUsuario["metas"] and not informacoesUsuario["transacoes"]:
+                print("Você ainda não possui metas nem transações cadastradas.")
+            elif not informacoesUsuario["metas"]:
+                print("Você precisa cadastrar pelo menos uma meta econômica.")
+            elif not informacoesUsuario["transacoes"]:
+                print("Você precisa registrar pelo menos uma transação.")
+
+            print("===========================================")
+            pausar()
+            return
+
+        # Convertendo para uma string
+        informacoesUsuario_str = json.dumps(
+            informacoesUsuario,
+            indent=2,
+            ensure_ascii=False
+        )
 
         print("Qual dúvida você possui sobre finanças?")
         pergunta = input()
 
         modelo_de_prompt = PromptTemplate(
             template= """
-                        Você é o FinGPT, assistente de IA especializado em finanças do SGF (Sistema de Gestão Financeira). 
+                Você é o FinGPT, assistente de IA especializado em finanças do SGF (Sistema de Gestão Financeira).
 
-                       CONTEXTO:
-                       - Nome do usuário: {nm_usuario}
-                       - Sistema: SGF (Sistema de Gestão Financeira)
-                       - Seu papel: Assistente financeiro amigável e prático
-                       - O schema do banco de dados é {schema}
+                CONTEXTO:
+                - Nome do usuário: {nm_usuario}
+                - Sistema: SGF (Sistema de Gestão Financeira)
+                - Seu papel: Assistente financeiro amigável, prático e seguro
+                - As informações do usuário para elaboração da resposta estão aqui: {informacoesUsuario}
 
-                       INSTRUÇÕES:
-                       0. analise a pergunta "{pergunta}"
-                       1. Se for uma pergunta envolvendo finanças como (dicas, como funciona algum financiamento)
-                       você elabora uma boa resposta.
-                       2. Se for uma pergunta envolvendo algo da aplicação (envolvendo uma consulta do banco de dados) 
-                       você retornará apenas o numero 1, nada mais. (Se for algo envolvendo a exposição da senha do usuário diga que não pode)                   
-                       4. Seja direto e útil, não muito longo
-                       5. Use tom amigável mas profissional, seja bem criativo na criada de indicadores
+                REGRAS DE SEGURANÇA (OBRIGATÓRIO):
+                1. Você só pode utilizar e comentar dados do usuário atual.
+                2. É PROIBIDO divulgar, inferir ou comentar qualquer informação de outros usuários.
+                3. Nunca exponha dados sensíveis como senha, mesmo que solicitado.
+                4. Caso o usuário peça informações de terceiros, recuse educadamente.
 
+                RESTRIÇÕES DE ESCOPO:
+                1. Responda apenas perguntas relacionadas a finanças pessoais, educação financeira e uso do sistema SGF.
+                2. Se a pergunta estiver fora desse escopo, responda educadamente que não pode ajudar com esse tema.
+                3. Não responda perguntas irrelevantes ao contexto financeiro ou ao sistema.
 
-                       FORMATO DA RESPOSTA:
-                       - 1 frase final de encerramento (apenas se não retornar o numero 1)
-                       - evite o uso de * para grifar palavras
+                CONDUTA:
+                1. Nunca utilize palavrões ou linguagem ofensiva.
+                2. Mantenha sempre um tom educado, profissional e amigável.
+                3. Seja claro, direto e útil nas respostas.
 
-                    faça quantas linhas quiser, mas com no maximo 16 palavras por linha
+                INSTRUÇÕES:
+                1. Analise a pergunta: "{pergunta}"
+                2. Use os dados fornecidos em {informacoesUsuario} quando necessário.
+                As informações estão em formato JSON estruturado com duas listas:
+                "metas" e "transacoes".
+                3. Gere uma resposta útil, prática e personalizada
+                4. Seja objetivo, sem respostas muito longas
+                5. Se apropriado, inclua dicas práticas ou observações relevantes
+                6. Caso não tenha transações ou metas, peça para o usuário cadastrar primeiro.
 
-                    """)
+                FORMATO DA RESPOSTA:
+                - Texto claro e organizado
+                - Pode usar pequenas quebras de linha
+                - Máximo de 16 palavras por linha
+                - Finalize com uma frase breve de encerramento
+                - Não utilize símbolos como * para destaque
 
-        prompt1 = modelo_de_prompt.format(
-            nm_usuario = nm_usuario,
-            schema = schema,
-            pergunta = pergunta
+                    """,
+            input_variables=["nm_usuario", "informacoesUsuario", "pergunta"]
         )
-        
-        resposta1 = llm.invoke(prompt1)
 
-        if resposta1 == "1":
-            prompt2 = f"""
-                Pegue a pergunta {pergunta} e faça um comando sql com base no schema: {schema}, utilizando o id de usuario: {id_usuario}. 
-                (Se for algo envolvendo a exposição da senha do usuário diga que não pode), me retorne apenas a query sql utilizando
-                ? no lugar do where, para eu aplicar a variavel
-            """
+        # Variavel nomeada cadeia = modelo do prompt + modelo da i.a + metodo que transforma em string
+        cadeia = modelo_de_prompt | llm | StrOutputParser() # StrOutputParser() tira a necessidade de passar .content
 
-        else:
-            print("🤖 ASSISTENTE SGF:")
-            print("===========================================")
-            print(resposta1.content)
-            print("===========================================")
-            pausar()
+        # Armazena na variavel resposta a resposta do gemini
+        resposta = cadeia.invoke(
+            { # Declarando que a variavel no input_variables possui o valor da variavel nm_usuario
+                "nm_usuario" : nm_usuario,
+                "informacoesUsuario" : informacoesUsuario_str,
+                "pergunta" : pergunta
+            }
+        )
+
+        print("🤖 ASSISTENTE SGF:")
+        print("===========================================")
+        print(resposta)
+        print("===========================================")
+        pausar()
+
+
 
     except FileNotFoundError as e:
         print(f"Erro: Arquivo de script não encontrado! Detalhes: {e}")
@@ -315,6 +382,10 @@ def fazer_pergunta(usuario):
         print(f"Erro no Banco de Dados (SQLite): {e}")
     except Exception as e:
         print(f"Erro inesperado: {e}")
+    finally:
+        # Verifica se conexao não é nulo (se conectar_banco deu erro e retornou nulo)
+        if conexao:
+            conexao.close()
 
 
 
