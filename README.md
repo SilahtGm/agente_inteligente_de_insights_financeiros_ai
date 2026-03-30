@@ -81,7 +81,7 @@ O banco `database.db` contém 4 tabelas principais:
 
 ### 1. Clone o repositório
 
-git clone https://github.com/SilahtGm/sgf.git
+git clone https://github.com/SilahtGm/agente_inteligente_de_insights_financeiros_ai.git
 
 
 ### 2. Instale as dependências
