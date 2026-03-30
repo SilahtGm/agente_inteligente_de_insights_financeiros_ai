@@ -17,6 +17,11 @@ O sistema permite:
 
 ---
 
+
+### 🔐 Segurança:
+- Para fins didáticos, as senhas são armazenadas em texto simples.
+- Em ambiente real, seria utilizado hash seguro com bcrypt ou Argon2.
+
 ## 🧠 Diferenciais do Projeto
 
 ### 🔹 Modelagem de Dados

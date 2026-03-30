@@ -8,8 +8,44 @@ import os #os para informações do sistema
 import matplotlib.pyplot as plt
 import pandas as pd
 import json
-import sys
 
+# -- FUNÇÃO PRINCIPAL DE CRIAÇÃO/CONEXÃO DE BANCO DE DADOS ==
+def inicializar_banco():
+    try:
+        # Guardando na variavel a checagem de se o banco de dados ja existe
+        banco_existe = os.path.exists('database.db')
+
+        # Guardando na variavel conexao a conexao do sqlite3, e fazendo a conexao
+        # com o banco de dados localizado no arquivp database.db, se ele não existir
+        # vai ser criado agora
+        conexao = sqlite3.connect('database.db')
+        cursor = conexao.cursor()
+
+        # 1. Tenta abrir e rodar o Schema, guardadp no arquivo schema.sql
+        with open('schema.sql', 'r', encoding='utf-8') as f:
+            cursor.executescript(f.read())
+
+        # 2. Tenta abrir e rodar os Inserts apenas se o banco for novo, caso
+        # contrario, apenas exibira que estará estabelecendo a conexão, os inserts
+        # armazenado em inserts.sql
+        if not banco_existe:
+            with open('inserts.sql', 'r', encoding='utf-8') as g:
+                cursor.executescript(g.read())
+            print(">>> Sucesso: Banco criado e populado pela primeira vez.")
+        else:
+            print(">>> Conectado: Banco de dados já existente.")
+
+        # Salvando e fechando a conexão
+        conexao.commit()
+        conexao.close()
+
+    # Excepts trazendo possiveis mensagens de erro
+    except FileNotFoundError as e:
+        print(f"Erro: Arquivo de script não encontrado! Detalhes: {e}")
+    except sqlite3.Error as e:
+        print(f"Erro no Banco de Dados (SQLite): {e}")
+    except Exception as e:
+        print(f"Erro inesperado: {e}")
 
 # --- FUNÇÃO BANCO DE DADOS ---
 
@@ -58,10 +94,12 @@ def conexao_gemini():
         print("3. Conexão com internet")
 
 
-
-
-
-
+# -- OBTER LLM --
+def obter_llm():
+    llm = conexao_gemini()
+    if not llm:
+        raise Exception("Erro IA")
+    return llm
 
 
 
@@ -69,7 +107,7 @@ def sugerir_economia(usuario):
     try:
         nm_usuario = usuario[1]
         # Armazenando na variavel llm a conexao
-        llm = conexao_gemini()
+        llm = obter_llm()
 
         # Prompt de sugestão da i.a
         print("Aguarde um momento...")
@@ -125,9 +163,11 @@ def sugerir_economia(usuario):
 def resumo_financeiro_ia(usuario):
     id_usuario = usuario[0]
     nm_usuario = usuario[1]
+    conexao = None
     try:
-        conexao = sqlite3.connect('database.db')
-        cursor = conexao.cursor()
+        # Estabelecendo conexoes
+        llm = obter_llm()
+        conexao, cursor = conectar_banco()
 
         # O Pandas já faz o trabalho de ler o SQL e transformar em DataFrame
         query = "SELECT * FROM transacoes WHERE id_usuario = ?"
@@ -136,14 +176,13 @@ def resumo_financeiro_ia(usuario):
         # Agora transformamos o DataFrame em uma string CSV
         # index=False evita que o Pandas adicione uma coluna de números desnecessária
         csv_resumo = df.to_csv(index=False)
-        conexao.close()
 
-        # Conexao com a i.a
-        llm = conexao_gemini()
+
+
 
         # Prompt de resumo financiero da i.a
         print("Aguarde um momento...")
-        prompt = f"""
+        modelo_prompt = PromptTemplate(template = """
                    Você é o FinGPT, assistente de IA especializado em finanças do SGF (Sistema de Gestão Financeira). 
 
                    CONTEXTO:
@@ -167,14 +206,22 @@ def resumo_financeiro_ia(usuario):
 
                 faça quantas linhas quiser, mas com no maximo 16 palavras por linha
 
-               """
+               """, input_variables= ["nm_usuario", "csv_resumo"] )
+
+        # Variavel nomeada cadeia = modelo do prompt + modelo da i.a + metodo que transforma em string
+        cadeia = modelo_prompt | llm | StrOutputParser()  # StrOutputParser() tira a necessidade de passar .content
 
         # Armazena na variavel resposta a resposta do gemini
-        resposta = llm.invoke(prompt)
+        resposta = cadeia.invoke(
+            {  # Declarando que a variavel no input_variables possui o valor da variavel nm_usuario
+                "nm_usuario": nm_usuario,
+                "csv_resumo": csv_resumo
+            }
+        )
 
         print("🤖 ASSISTENTE SGF:")
         print("===========================================")
-        print(resposta.content)
+        print(resposta)
         print("===========================================")
         pausar()
 
@@ -185,6 +232,9 @@ def resumo_financeiro_ia(usuario):
         print(f"Erro no Banco de Dados (SQLite): {e}")
     except Exception as e:
         print(f"Erro inesperado: {e}")
+    finally:
+        if conexao:
+            conexao.close()
 
 
 
@@ -192,24 +242,25 @@ def resumo_financeiro_ia(usuario):
 def prever_proximos_meses(usuario):
     id_usuario = usuario[0]
     nm_usuario = usuario[1]
+    conexao = None
     try:
-        conexao = sqlite3.connect('database.db')
-        cursor = conexao.cursor()
+        # Estabelecendo conexoes
+        conexao, cursor = conectar_banco()
+        llm = obter_llm()
 
-        # O Pandas já faz o trabalho de ler o SQL e transformar em DataFrame
+        # O Pandas faz o trabalho de ler o SQL e transformar em DataFrame
         query = "SELECT * FROM transacoes WHERE id_usuario = ?"
         df = pd.read_sql_query(query, conexao, params=(id_usuario,))
 
         # Agora transformamos o DataFrame em uma string CSV
         # index=False evita que o Pandas adicione uma coluna de números desnecessária
         csv_resumo = df.to_csv(index=False)
-        conexao.close()
 
-        # Conexao com a i.a
-        llm = conexao_gemini()
+
+
+        print("Aguarde um momento...")
 
         # Prompt de previsão financeiro da i.a
-        print("Aguarde um momento...")
         modelo_prompt = PromptTemplate(
             template = """
                        Você é o FinGPT, assistente de IA especializado em finanças do SGF (Sistema de Gestão Financeira). 
@@ -236,14 +287,26 @@ def prever_proximos_meses(usuario):
 
                     faça quantas linhas quiser, mas com no maximo 16 palavras por linha
 
-                   """)
+                   """, input_variables=["nm_usuario", "csv_resumo"])
+
+
+
+        # Variavel nomeada cadeia = modelo do prompt + modelo da i.a + metodo que transforma em string
+        cadeia = modelo_prompt | llm | StrOutputParser()  # StrOutputParser() tira a necessidade de passar .content
 
         # Armazena na variavel resposta a resposta do gemini
-        resposta = llm.invoke(prompt)
+        resposta = cadeia.invoke(
+            {  # Declarando que a variavel no input_variables possui o valor da variavel nm_usuario
+                "nm_usuario": nm_usuario,
+                "csv_resumo": csv_resumo
+            }
+        )
+
+
 
         print("🤖 ASSISTENTE SGF:")
         print("===========================================")
-        print(resposta.content)
+        print(resposta)
         print("===========================================")
         pausar()
     except FileNotFoundError as e:
@@ -252,6 +315,10 @@ def prever_proximos_meses(usuario):
         print(f"Erro no Banco de Dados (SQLite): {e}")
     except Exception as e:
         print(f"Erro inesperado: {e}")
+    finally:
+        # Verifica se conexao não é nulo (se conectar_banco deu erro e retornou nulo)
+        if conexao:
+            conexao.close()
 
 
 
@@ -264,8 +331,8 @@ def fazer_pergunta(usuario):
     conexao = None
     try:
         # Conexao com o banco de dados e i.a
-        conexao = conectar_banco()
-        llm = conexao_gemini()
+        conexao, cursor = conectar_banco()
+        llm = obter_llm()
 
         #  Buscar METAS
         df_metas = pd.read_sql_query(
@@ -399,43 +466,7 @@ def pausar():
     print("\n\n\n\n")
 
 
-# Função principal de criação/conexão de banco de dados
-def inicializar_banco():
-    try:
-        # Guardando na variavel a checagem de se o banco de dados ja existe
-        banco_existe = os.path.exists('database.db')
 
-        # Guardando na variavel conexao a conexao do sqlite3, e fazendo a conexao
-        # com o banco de dados localizado no arquivp database.db, se ele não existir
-        # vai ser criado agora
-        conexao = sqlite3.connect('database.db')
-        cursor = conexao.cursor()
-
-        # 1. Tenta abrir e rodar o Schema, guardadp no arquivo schema.sql
-        with open('schema.sql', 'r', encoding='utf-8') as f:
-            cursor.executescript(f.read())
-
-        # 2. Tenta abrir e rodar os Inserts apenas se o banco for novo, caso
-        # contrario, apenas exibira que estará estabelecendo a conexão, os inserts
-        # armazenado em inserts.sql
-        if not banco_existe:
-            with open('inserts.sql', 'r', encoding='utf-8') as g:
-                cursor.executescript(g.read())
-            print(">>> Sucesso: Banco criado e populado pela primeira vez.")
-        else:
-            print(">>> Conectado: Banco de dados já existente.")
-
-        # Salvando e fechando a conexão
-        conexao.commit()
-        conexao.close()
-
-    # Excepts trazendo possiveis mensagens de erro
-    except FileNotFoundError as e:
-        print(f"Erro: Arquivo de script não encontrado! Detalhes: {e}")
-    except sqlite3.Error as e:
-        print(f"Erro no Banco de Dados (SQLite): {e}")
-    except Exception as e:
-        print(f"Erro inesperado: {e}")
 
 
 
@@ -452,15 +483,14 @@ def login():
         senha = input("Digite sua senha: ")
 
         # Conecta ao banco de dados
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
+        conexao, cursor = conectar_banco()
 
         # Busca o usuário com esse email e essa senha
         query = "SELECT id_usuario, nm_usuario FROM usuarios WHERE email = ? AND senha = ?"
         cursor.execute(query, (email, senha))
 
         usuario = cursor.fetchone()  # Tenta pegar uma linha
-        conn.close()
+        conexao.close()
 
         if usuario:
             # Se encontrou, usuario[0] é o ID e usuario[1] é o Nome
@@ -472,6 +502,7 @@ def login():
             print("\n[!] E-mail ou senha incorretos.")
             return None
 
+# ⚠️ EM AMBIENTE REAL, A SENHA DEVERIA SER ARMAZENADA COM HASH
 def criar_conta():
     print("\n======================================")
     print("      CRIAÇÃO DE CONTA")
@@ -481,15 +512,14 @@ def criar_conta():
     senha = str(input("Digite a sua senha: "))
 
     try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
+        conexao, cursor = conectar_banco()
 
         # 1. Executa a inserção
         query = "INSERT INTO usuarios (nm_usuario, email, senha) VALUES (?, ?, ?);"
         cursor.execute(query, (nome, email, senha))
 
         # 2. IMPORTANTE: Salva a alteração no banco de dados
-        conn.commit()
+        conexao.commit()
 
         # 3. Verifica se o ID foi gerado (confirmação de sucesso)
         if cursor.lastrowid:
@@ -497,7 +527,7 @@ def criar_conta():
             print("[+] Acesse na área de Login")
         else:
             print("\n[!] Ocorreu um erro na criação da sua conta.")
-        conn.close()
+        conexao.close()
     except sqlite3.IntegrityError:
         print("\n[!] Erro: Este e-mail já está cadastrado!")
     except sqlite3.Error as e:
@@ -516,8 +546,7 @@ def encerrando():
 def checar_saldo(usuario):
     id_usuario = usuario[0]
     try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
+        conexao, cursor = conectar_banco()
 
         tipo = "Entrada"
         query1 = "SELECT SUM(valor) FROM transacoes WHERE id_usuario = ? AND tipo = ?"
@@ -537,17 +566,19 @@ def checar_saldo(usuario):
             print("Você não possui transações de saída")
             return
 
-        saldo = entrada[0] - saida[0]
+        entrada_valor = entrada[0] or 0
+        saida_valor = saida[0] or 0
+        saldo = entrada_valor - saida_valor
 
         print(f"\n=============================")
         print(f"   SALDO ATUAL: R$ {saldo}")
-        print(f"   (Entradas: R$ {entrada} | Saídas: R$ {saida})")
+        print(f"Entradas: R$ {entrada_valor} | Saídas: R$ {saida_valor}")
         print(f"=============================")
 
         pausar()
 
-        conn.commit()
-        conn.close()
+        conexao.commit()
+        conexao.close()
 
 
 
@@ -561,11 +592,10 @@ def checar_saldo(usuario):
 def registrar_transacao(usuario):
     id_usuario = usuario[0]
 
-    conn = None
+    conexao = None
 
     try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
+        conexao, cursor = conectar_banco()
 
 
         while True:
@@ -625,7 +655,7 @@ def registrar_transacao(usuario):
                     VALUES (?, ?, ?, ?, ?, ?)
                 """
                 cursor.execute(query, (id_usuario, id_categoria, valor, tipo_db, data_hoje, descricao))
-                conn.commit()
+                conexao.commit()
                 print("\n[+] Transação registrada com sucesso!")
 
                 # Pergunta se quer continuar
@@ -639,18 +669,18 @@ def registrar_transacao(usuario):
     except sqlite3.Error as e:
         print(f"\n[!] Erro no Banco de Dados: {e}")
     finally:
-        conn.close()
+        if conexao:
+            conexao.close()
 
 
 
 def exibir_transacoes(usuario):
     id_usuario = usuario[0]
 
-    conn = None
+    conexao = None
 
     try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
+        conexao, cursor = conectar_banco()
         query = "SELECT valor, tipo, data, descricao FROM transacoes WHERE id_usuario = ?"
         cursor.execute(query,(id_usuario,))
         movimentacoes = cursor.fetchall()
@@ -676,17 +706,17 @@ def exibir_transacoes(usuario):
     except sqlite3.Error as e:
         print(f"\n[!] Erro no Banco de Dados: {e}")
     finally:
-        conn.close()
+        if conexao:
+            conexao.close()
 
 
 def criar_metas(usuario):
    id_usuario = usuario[0]
 
-   conn = None
+   conexao = None
 
    try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
+        conexao, cursor = conectar_banco()
 
         while True:
             objetivo = str(input("Descrição da meta: "))
@@ -695,7 +725,7 @@ def criar_metas(usuario):
 
             query = ("INSERT INTO metas_economicas (id_usuario, valor_objetivo, objetivo, prazo) VALUES (?, ?, ?, ?)")
             cursor.execute(query,(id_usuario, valor_objetivo, objetivo, prazo))
-            conn.commit()
+            conexao.commit()
 
             # 3. Verifica se o ID foi gerado (confirmação de sucesso)
             if cursor.lastrowid:
@@ -712,17 +742,17 @@ def criar_metas(usuario):
    except sqlite3.Error as e:
        print(f"\n[!] Erro no Banco de Dados: {e}")
    finally:
-       conn.close()
+       if conexao:
+           conexao.close()
 
 
 def exibir_metas(usuario):
     id_usuario = usuario[0]
 
-    conn = None
+    conexao = None
 
     try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
+        conexao, cursor = conectar_banco()
         query = "SELECT  objetivo, valor_objetivo, prazo FROM metas_economicas WHERE id_usuario = ?"
         cursor.execute(query,(id_usuario,))
         metas = cursor.fetchall()
@@ -748,15 +778,15 @@ def exibir_metas(usuario):
     except sqlite3.Error as e:
         print(f"\n[!] Erro no Banco de Dados: {e}")
     finally:
-        conn.close()
+        if conexao:
+            conexao.close()
 
 
 def exibir_saude_financeira(usuario):
     id_usuario = usuario[0]
 
     try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
+        conexao, cursor = conectar_banco()
 
         tipo = "Entrada"
         query1 = "SELECT SUM(valor) FROM transacoes WHERE id_usuario = ? AND tipo = ?"
@@ -825,7 +855,7 @@ def exibir_saude_financeira(usuario):
             print("Vizualização encerrada.")
 
 
-        conn.close()
+        conexao.close()
     except sqlite3.Error as e:
         print(f"\n[!] Erro no Banco de Dados: {e}")
 
@@ -834,8 +864,7 @@ def exibir_ranking_gastos(usuario):
     id_usuario = usuario[0]
 
     try:
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
+        conexao, cursor = conectar_banco()
 
         # Usamos o Pandas para ler a query direto do banco
         query = """
@@ -847,7 +876,7 @@ def exibir_ranking_gastos(usuario):
         """
         cursor.execute(query, (id_usuario,))
         ranking = cursor.fetchall()
-        conn.close()
+        conexao.close()
 
         # Verifica se a lista está vazia
         if not ranking:
