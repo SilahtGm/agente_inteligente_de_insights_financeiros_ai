@@ -1,6 +1,5 @@
 # main.py
 import sys
-
 from db.connection import inicializar_banco, conectar_banco
 from auth.auth import login, criar_conta
 from features.transacoes import registrar_transacao, exibir_transacoes
@@ -44,7 +43,6 @@ def menu():
 
 
 def menu_pos_login(usuario):
-    id_usuario = usuario[0]
     nm_usuario = usuario[1]
 
     while True:

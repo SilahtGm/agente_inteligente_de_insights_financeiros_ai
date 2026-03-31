@@ -1,6 +1,4 @@
-
 import sqlite3
-
 from db.connection import conectar_banco
 from utils.helpers import pausar
 

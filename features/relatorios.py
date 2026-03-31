@@ -1,9 +1,7 @@
 # Importações necessarias
-import sqlite3  # sqlite para banco de dados
-
+import sqlite3
 import matplotlib.pyplot as plt
 import pandas as pd
-
 from db.connection import conectar_banco
 from utils.helpers import pausar
 
