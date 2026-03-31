@@ -22,14 +22,14 @@ def inicializar_banco():
         cursor = conexao.cursor()
 
         # 1. Tenta abrir e rodar o Schema, guardadp no arquivo schema.sql
-        with open('schema.sql', 'r', encoding='utf-8') as f:
+        with open('data/schema.sql', 'r', encoding='utf-8') as f:
             cursor.executescript(f.read())
 
         # 2. Tenta abrir e rodar os Inserts apenas se o banco for novo, caso
         # contrario, apenas exibira que estará estabelecendo a conexão, os inserts
         # armazenado em inserts.sql
         if not banco_existe:
-            with open('inserts.sql', 'r', encoding='utf-8') as g:
+            with open('data/inserts.sql', 'r', encoding='utf-8') as g:
                 cursor.executescript(g.read())
             print(">>> Sucesso: Banco criado e populado pela primeira vez.")
         else:

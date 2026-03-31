@@ -90,7 +90,7 @@ pip install -r requirements.txt
 
 ### 3.🔑 Configuração da API (IA)
 
-Crie um arquivo .env na raiz do projeto:
+Crie um arquivo .env na pasta *ia* raiz do projeto:
 
 GOOGLE_API_KEY=sua_chave_aqui
 
